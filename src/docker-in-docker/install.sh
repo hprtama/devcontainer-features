@@ -22,6 +22,7 @@ MICROSOFT_GPG_KEYS_ROLLING_URI="https://packages.microsoft.com/keys/microsoft-ro
 DOCKER_MOBY_ARCHIVE_VERSION_CODENAMES="trixie bookworm buster bullseye bionic focal jammy noble"
 DOCKER_LICENSED_ARCHIVE_VERSION_CODENAMES="trixie bookworm buster bullseye bionic focal hirsute impish jammy noble"
 DISABLE_IP6_TABLES="${DISABLEIP6TABLES:-false}"
+LEGACY_IPTABLES="${LEGACYIPTABLES:-false}"
 
 # Default: Exit on any failure.
 set -e
@@ -303,10 +304,16 @@ if ! command -v git >/dev/null 2>&1; then
     check_packages git
 fi
 
-# Swap to legacy iptables for compatibility (Debian only)
-if [ "${ADJUSTED_ID}" = "debian" ] && type iptables-legacy > /dev/null 2>&1; then
-    update-alternatives --set iptables /usr/sbin/iptables-legacy
-    update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
+# Set iptables to legacy if requested
+if [ "${LEGACY_IPTABLES}" = "true "]; then
+    # Swap to legacy iptables for compatibility (Debian only)
+    if [ "${ADJUSTED_ID}" = "debian" ] && type iptables-legacy > /dev/null 2>&1; then
+        update-alternatives --set iptables /usr/sbin/iptables-legacy
+        update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
+    fi
+else
+    update-alternatives --set iptables /usr/sbin/iptables-nft
+    update-alternatives --set ip6tables /usr/sbin/ip6tables-nft
 fi
 
 # Set up the necessary repositories

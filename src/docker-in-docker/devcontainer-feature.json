@@ -1,8 +1,8 @@
 {
     "id": "docker-in-docker",
-    "version": "2.14.0",
+    "version": "0.0.1",
     "name": "Docker (Docker-in-Docker)",
-    "documentationURL": "https://github.com/devcontainers/features/tree/main/src/docker-in-docker",
+    // "documentationURL": "https://github.com/devcontainers/features/tree/main/src/docker-in-docker",
     "description": "Create child containers *inside* a container, independent from the host's docker instance. Installs Docker extension in the container along with needed CLIs.",
     "options": {
         "version": {
@@ -60,6 +60,11 @@
             "type": "boolean",
             "default": false,
             "description": "Disable ip6tables (this option is only applicable for Docker versions 27 and greater)"
+        },
+        "legacyIptables": {
+            "type": "boolean",
+            "default": false,
+            "description": "Swap to legacy iptables for compatibility (Debian only)"
         }
     },
     "entrypoint": "/usr/local/share/docker-init.sh",

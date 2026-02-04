@@ -305,15 +305,18 @@ if ! command -v git >/dev/null 2>&1; then
 fi
 
 # Set iptables to legacy if requested
-if [ "${LEGACY_IPTABLES}" = "true "]; then
+if [ "${LEGACY_IPTABLES}" = "true" ]; then
     # Swap to legacy iptables for compatibility (Debian only)
     if [ "${ADJUSTED_ID}" = "debian" ] && type iptables-legacy > /dev/null 2>&1; then
         update-alternatives --set iptables /usr/sbin/iptables-legacy
         update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
     fi
 else
-    update-alternatives --set iptables /usr/sbin/iptables-nft
-    update-alternatives --set ip6tables /usr/sbin/ip6tables-nft
+    # Swap to nft iptables
+    if [ "${ADJUSTED_ID}" = "debian" ] && type iptables-nft > /dev/null 2>&1; then
+        update-alternatives --set iptables /usr/sbin/iptables-nft
+        update-alternatives --set ip6tables /usr/sbin/ip6tables-nft
+    fi
 fi
 
 # Set up the necessary repositories
@@ -754,6 +757,7 @@ fallback_compose-switch() {
     curl -fsSL "https://github.com/docker/compose-switch/releases/download/v${compose_switch_version}/docker-compose-linux-${target_switch_arch}" -o /usr/local/bin/compose-switch
 }
 # Install docker-compose switch if not already installed - https://github.com/docker/compose-switch#manual-installation
+# Docker compose switch is used to translate docker-compose commands (v1) to docker compose commands
 if [ "${INSTALL_DOCKER_COMPOSE_SWITCH}" = "true" ] && ! type compose-switch > /dev/null 2>&1; then
     if type docker-compose > /dev/null 2>&1; then
         echo "(*) Installing compose-switch..."
@@ -781,8 +785,12 @@ if [ "${INSTALL_DOCKER_COMPOSE_SWITCH}" = "true" ] && ! type compose-switch > /d
         # TODO: Verify checksum once available: https://github.com/docker/compose-switch/issues/11
         # Setup v1 CLI as alternative in addition to compose-switch (which maps to v2)
         mv "${current_compose_path}" "${target_compose_path}"
-        update-alternatives --install ${docker_compose_path} docker-compose /usr/local/bin/compose-switch 99
-        update-alternatives --install ${docker_compose_path} docker-compose "${target_compose_path}" 1
+        if [ "${ADJUSTED_ID}" = "debian" ]; then
+            update-alternatives --install ${docker_compose_path} docker-compose /usr/local/bin/compose-switch 99
+            update-alternatives --install ${docker_compose_path} docker-compose "${target_compose_path}" 1
+        else
+            ln -sf /usr/local/bin/compose-switch ${docker_compose_path}
+        fi
     else
         err "Skipping installation of compose-switch as docker compose is unavailable..."
     fi

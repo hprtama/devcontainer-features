@@ -29,6 +29,7 @@ set -e
 
 # Clean up
 rm -rf /var/lib/apt/lists/*
+chmod 1777 /tmp
 
 # Setup STDERR.
 err() {
@@ -66,9 +67,9 @@ fi
 pkg_mgr_update() {
     case ${ADJUSTED_ID} in
         debian)
-            if [ "$(find /var/lib/apt/lists/* | wc -l)" = "0" ]; then
+            if [ "$(find /var/lib/apt/lists -mindepth 1 | wc -l)" = "0" ]; then
                 echo "Running apt-get update..."
-                apt-get update -y
+                apt-get update -y -o APT::Sandbox::User=root
             fi
             ;;
         rhel)
@@ -91,7 +92,7 @@ check_packages() {
         debian)
             if ! dpkg -s "$@" > /dev/null 2>&1; then
                 pkg_mgr_update
-                apt-get -y install --no-install-recommends "$@"
+                apt-get -y install --no-install-recommends "$@" -o APT::Sandbox::User=root
             fi
             ;;
         rhel)
@@ -455,7 +456,7 @@ fi
 # Refresh package database
 case ${ADJUSTED_ID} in
     debian)
-        apt-get update
+        apt-get update -o APT::Sandbox::User=root
         ;;
     rhel)
         pkg_mgr_update
@@ -554,7 +555,7 @@ else
             if [ "${USE_MOBY}" = "true" ]; then
                 # Install engine
                 set +e # Handle error gracefully
-                    apt-get -y install --no-install-recommends moby-cli${cli_version_suffix} moby-buildx${buildx_version_suffix} moby-engine${engine_version_suffix}
+                    apt-get -y install --no-install-recommends moby-cli${cli_version_suffix} moby-buildx${buildx_version_suffix} moby-engine${engine_version_suffix} -o APT::Sandbox::User=root
                     exit_code=$?
                 set -e    
                 
@@ -564,12 +565,12 @@ else
                 fi
 
                 # Install compose
-                apt-get -y install --no-install-recommends moby-compose || err "Package moby-compose (Docker Compose v2) not available for OS ${ID} ${VERSION_CODENAME} (${architecture}). Skipping."
+                apt-get -y install --no-install-recommends moby-compose -o APT::Sandbox::User=root || err "Package moby-compose (Docker Compose v2) not available for OS ${ID} ${VERSION_CODENAME} (${architecture}). Skipping."
             else
-                apt-get -y install --no-install-recommends docker-ce-cli${cli_version_suffix} docker-ce${engine_version_suffix}
+                apt-get -y install --no-install-recommends docker-ce-cli${cli_version_suffix} docker-ce${engine_version_suffix} -o APT::Sandbox::User=root
                 # Install compose
                 apt-mark hold docker-ce docker-ce-cli
-                apt-get -y install --no-install-recommends docker-compose-plugin || echo "(*) Package docker-compose-plugin (Docker Compose v2) not available for OS ${ID} ${VERSION_CODENAME} (${architecture}). Skipping."
+                apt-get -y install --no-install-recommends docker-compose-plugin -o APT::Sandbox::User=root || echo "(*) Package docker-compose-plugin (Docker Compose v2) not available for OS ${ID} ${VERSION_CODENAME} (${architecture}). Skipping."
             fi
             ;;
         rhel)
